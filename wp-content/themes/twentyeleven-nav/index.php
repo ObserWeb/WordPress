@@ -15,7 +15,7 @@
 
 get_header(); 
 
-$the_query = new WP_Query( array( 'tag__and' => get_curr_tags_array() ) );
+$the_query = new WP_Query( array( 'tag__and' => get_curr_tags_array(), 'paged' => (int)get_query_var('paged') ) );
 
 // query_posts(''); 
 ?>
