@@ -638,13 +638,13 @@ function my_wp_tag_cloud( $args = '' ) {
 				unset($tagarr[$dkey]);
 			}
                             
-			$tagvar = implode(",", $tagarr);
-			$link = add_query_arg( "tags", $tagvar);
+			$taglist = implode(",", $tagarr);
+			$link = add_query_arg( "tags", $taglist);
 		}
 		else {
 			$tagarr = array_merge($currtags_array, array($tag->term_id));
-			$tagvar = implode(",", $tagarr);
-			$link = add_query_arg( "tags", $tagvar );
+			$taglist = implode(",", $tagarr);
+			$link = add_query_arg( "tags", $taglist );
 		}
 		// if dont
 		//$link = "?".$query_string."&tag=".$tag->term_id;
@@ -654,8 +654,17 @@ function my_wp_tag_cloud( $args = '' ) {
 
 		$tags[ $key ]->link = $link;
 		$tags[ $key ]->id = $tag->term_id;
+		$tags[ $key ]->tagarr = $tagarr;
 	}
-
+	
+	if ('add' == $args['semantics']) {
+		foreach ( $tags as $key => $tag ) {
+			$q = new WP_Query( array( 'tag__and' => $tag->tagarr ) );
+			if ($q->found_posts > 0) $tag->count = $q->found_posts;
+			else unset($tags[$key]);
+		}
+	}
+	
 	$return = wp_generate_tag_cloud( $tags, $args ); // Here's where those top tags get sorted according to $args
 
 	$return = apply_filters( 'wp_tag_cloud', $return, $args );
