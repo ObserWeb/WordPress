@@ -7,6 +7,7 @@
  * @since Twenty Eleven 1.0
  */
 
+
 $options = twentyeleven_get_theme_options();
 $current_layout = $options['theme_layout'];
 
@@ -14,6 +15,31 @@ if ( 'content' != $current_layout ) :
 ?>
 		<div id="secondary" class="widget-area" role="complementary">
 			<?php if ( ! dynamic_sidebar( 'sidebar-1' ) ) : ?>
+
+<aside id="tags"><?php _e('NAVEGACION HOLOGRAMATICA:'); ?>
+<?php
+$greenargs = "echo&semantics=add&exclude=".get_curr_tags();
+$greencloud = my_wp_tag_cloud($greenargs); 
+$redcloud = '';
+if (get_curr_tags()!='') {
+	$redargs = "smallest=10&largest=10&format=list&orderby=count&order=DESC&echo&semantics=del&include=".get_curr_tags();
+	$redcloud = my_wp_tag_cloud($redargs);
+}
+?>
+			<br>
+			<div id="hologrammar" style="color: red;"> 
+			<br> ETIQUETAS ACTIVADAS <br> <?php echo $redcloud; ?>
+			__________________________
+
+			</div>
+			<div id="hologrammar" style="color: green;">
+			<br> DISTINCIONES INACTIVAS <br> <?php echo $greencloud; ?>
+			__________________________
+			<br>
+
+			</div>
+			<br>
+ </aside>
 
 				<aside id="archives" class="widget">
 					<h3 class="widget-title"><?php _e( 'Archives', 'twentyeleven' ); ?></h3>

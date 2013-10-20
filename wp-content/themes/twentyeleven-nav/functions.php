@@ -62,9 +62,10 @@ if ( ! function_exists( 'twentyeleven_setup' ) ):
  *
  * @uses load_theme_textdomain() For translation/localization support.
  * @uses add_editor_style() To style the visual editor.
- * @uses add_theme_support() To add support for post thumbnails, automatic feed links, custom headers
- * 	and backgrounds, and post formats.
+ * @uses add_theme_support() To add support for post thumbnails, automatic feed links, and Post Formats.
  * @uses register_nav_menus() To add support for navigation menus.
+ * @uses add_custom_background() To add support for a custom background.
+ * @uses add_custom_image_header() To add support for a custom header.
  * @uses register_default_headers() To register the default custom header images provided with the theme.
  * @uses set_post_thumbnail_size() To set a custom post thumbnail size.
  *
@@ -78,6 +79,11 @@ function twentyeleven_setup() {
 	 * to change 'twentyeleven' to the name of your theme in all the template files.
 	 */
 	load_theme_textdomain( 'twentyeleven', get_template_directory() . '/languages' );
+
+	$locale = get_locale();
+	$locale_file = get_template_directory() . "/languages/$locale.php";
+	if ( is_readable( $locale_file ) )
+		require_once( $locale_file );
 
 	// This theme styles the visual editor with editor-style.css to match the theme style.
 	add_editor_style();
@@ -97,63 +103,42 @@ function twentyeleven_setup() {
 	// Add support for a variety of post formats
 	add_theme_support( 'post-formats', array( 'aside', 'link', 'gallery', 'status', 'quote', 'image' ) );
 
-	$theme_options = twentyeleven_get_theme_options();
-	if ( 'dark' == $theme_options['color_scheme'] )
-		$default_background_color = '1d1d1d';
-	else
-		$default_background_color = 'e2e2e2';
-
-	// Add support for custom backgrounds.
-	add_theme_support( 'custom-background', array(
-		// Let WordPress know what our default background color is.
-		// This is dependent on our current color scheme.
-		'default-color' => $default_background_color,
-	) );
+	// Add support for custom backgrounds
+	add_custom_background();
 
 	// This theme uses Featured Images (also known as post thumbnails) for per-post/per-page Custom Header images
 	add_theme_support( 'post-thumbnails' );
 
-	// Add support for custom headers.
-	$custom_header_support = array(
-		// The default header text color.
-		'default-text-color' => '000',
-		// The height and width of our custom header.
-		'width' => apply_filters( 'twentyeleven_header_image_width', 1000 ),
-		'height' => apply_filters( 'twentyeleven_header_image_height', 288 ),
-		// Support flexible heights.
-		'flex-height' => true,
-		// Random image rotation by default.
-		'random-default' => true,
-		// Callback for styling the header.
-		'wp-head-callback' => 'twentyeleven_header_style',
-		// Callback for styling the header preview in the admin.
-		'admin-head-callback' => 'twentyeleven_admin_header_style',
-		// Callback used to display the header preview in the admin.
-		'admin-preview-callback' => 'twentyeleven_admin_header_image',
-	);
+	// The next four constants set how Twenty Eleven supports custom headers.
 
-	add_theme_support( 'custom-header', $custom_header_support );
+	// The default header text color
+	define( 'HEADER_TEXTCOLOR', '000' );
 
-	if ( ! function_exists( 'get_custom_header' ) ) {
-		// This is all for compatibility with versions of WordPress prior to 3.4.
-		define( 'HEADER_TEXTCOLOR', $custom_header_support['default-text-color'] );
-		define( 'HEADER_IMAGE', '' );
-		define( 'HEADER_IMAGE_WIDTH', $custom_header_support['width'] );
-		define( 'HEADER_IMAGE_HEIGHT', $custom_header_support['height'] );
-		add_custom_image_header( $custom_header_support['wp-head-callback'], $custom_header_support['admin-head-callback'], $custom_header_support['admin-preview-callback'] );
-		add_custom_background();
-	}
+	// By leaving empty, we allow for random image rotation.
+	define( 'HEADER_IMAGE', '' );
+
+	// The height and width of your custom header.
+	// Add a filter to twentyeleven_header_image_width and twentyeleven_header_image_height to change these values.
+	define( 'HEADER_IMAGE_WIDTH', apply_filters( 'twentyeleven_header_image_width', 1000 ) );
+	define( 'HEADER_IMAGE_HEIGHT', apply_filters( 'twentyeleven_header_image_height', 288 ) );
 
 	// We'll be using post thumbnails for custom header images on posts and pages.
 	// We want them to be the size of the header image that we just defined
 	// Larger images will be auto-cropped to fit, smaller ones will be ignored. See header.php.
-	set_post_thumbnail_size( $custom_header_support['width'], $custom_header_support['height'], true );
+	set_post_thumbnail_size( HEADER_IMAGE_WIDTH, HEADER_IMAGE_HEIGHT, true );
 
-	// Add Twenty Eleven's custom image sizes.
-	// Used for large feature (header) images.
-	add_image_size( 'large-feature', $custom_header_support['width'], $custom_header_support['height'], true );
-	// Used for featured posts if a large-feature doesn't exist.
-	add_image_size( 'small-feature', 500, 300 );
+	// Add Twenty Eleven's custom image sizes
+	add_image_size( 'large-feature', HEADER_IMAGE_WIDTH, HEADER_IMAGE_HEIGHT, true ); // Used for large feature (header) images
+	add_image_size( 'small-feature', 500, 300 ); // Used for featured posts if a large-feature doesn't exist
+
+	// Turn on random header image rotation by default.
+	add_theme_support( 'custom-header', array( 'random-default' => true ) );
+
+	// Add a way for the custom header to be styled in the admin panel that controls
+	// custom headers. See twentyeleven_admin_header_style(), below.
+	add_custom_image_header( 'twentyeleven_header_style', 'twentyeleven_admin_header_style', 'twentyeleven_admin_header_image' );
+
+	// ... and thus ends the changeable header business.
 
 	// Default custom headers packaged with the theme. %s is a placeholder for the theme template directory URI.
 	register_default_headers( array(
@@ -216,18 +201,17 @@ if ( ! function_exists( 'twentyeleven_header_style' ) ) :
  * @since Twenty Eleven 1.0
  */
 function twentyeleven_header_style() {
-	$text_color = get_header_textcolor();
 
-	// If no custom options for text are set, let's bail.
-	if ( $text_color == HEADER_TEXTCOLOR )
+	// If no custom options for text are set, let's bail
+	// get_header_textcolor() options: HEADER_TEXTCOLOR is default, hide text (returns 'blank') or any hex value
+	if ( HEADER_TEXTCOLOR == get_header_textcolor() )
 		return;
-
 	// If we get this far, we have custom styles. Let's do this.
 	?>
-	<style type="text/css" id="twentyeleven-header-css">
+	<style type="text/css">
 	<?php
 		// Has the text been hidden?
-		if ( 'blank' == $text_color ) :
+		if ( 'blank' == get_header_textcolor() ) :
 	?>
 		#site-title,
 		#site-description {
@@ -241,7 +225,7 @@ function twentyeleven_header_style() {
 	?>
 		#site-title a,
 		#site-description {
-			color: #<?php echo $text_color; ?> !important;
+			color: #<?php echo get_header_textcolor(); ?> !important;
 		}
 	<?php endif; ?>
 	</style>
@@ -253,13 +237,13 @@ if ( ! function_exists( 'twentyeleven_admin_header_style' ) ) :
 /**
  * Styles the header image displayed on the Appearance > Header admin panel.
  *
- * Referenced via add_theme_support('custom-header') in twentyeleven_setup().
+ * Referenced via add_custom_image_header() in twentyeleven_setup().
  *
  * @since Twenty Eleven 1.0
  */
 function twentyeleven_admin_header_style() {
 ?>
-	<style type="text/css" id="twentyeleven-admin-header-css">
+	<style type="text/css">
 	.appearance_page_custom-header #headimg {
 		border: none;
 	}
@@ -303,24 +287,23 @@ if ( ! function_exists( 'twentyeleven_admin_header_image' ) ) :
 /**
  * Custom header image markup displayed on the Appearance > Header admin panel.
  *
- * Referenced via add_theme_support('custom-header') in twentyeleven_setup().
+ * Referenced via add_custom_image_header() in twentyeleven_setup().
  *
  * @since Twenty Eleven 1.0
  */
 function twentyeleven_admin_header_image() { ?>
 	<div id="headimg">
 		<?php
-		$color = get_header_textcolor();
-		$image = get_header_image();
-		if ( $color && $color != 'blank' )
-			$style = ' style="color:#' . $color . '"';
+		if ( 'blank' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) || '' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) )
+			$style = ' style="display:none;"';
 		else
-			$style = ' style="display:none"';
+			$style = ' style="color:#' . get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) . ';"';
 		?>
-		<h1 class="displaying-header-text"><a id="name"<?php echo $style; ?> onclick="return false;" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php bloginfo( 'name' ); ?></a></h1>
-		<div id="desc" class="displaying-header-text"<?php echo $style; ?>><?php bloginfo( 'description' ); ?></div>
-		<?php if ( $image ) : ?>
-			<img src="<?php echo esc_url( $image ); ?>" alt="" />
+		<h1><a id="name"<?php echo $style; ?> onclick="return false;" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php bloginfo( 'name' ); ?></a></h1>
+		<div id="desc"<?php echo $style; ?>><?php bloginfo( 'description' ); ?></div>
+		<?php $header_image = get_header_image();
+		if ( ! empty( $header_image ) ) : ?>
+			<img src="<?php echo esc_url( $header_image ); ?>" alt="" />
 		<?php endif; ?>
 	</div>
 <?php }
@@ -337,14 +320,12 @@ function twentyeleven_excerpt_length( $length ) {
 }
 add_filter( 'excerpt_length', 'twentyeleven_excerpt_length' );
 
-if ( ! function_exists( 'twentyeleven_continue_reading_link' ) ) :
 /**
  * Returns a "Continue Reading" link for excerpts
  */
 function twentyeleven_continue_reading_link() {
 	return ' <a href="'. esc_url( get_permalink() ) . '">' . __( 'Continue reading <span class="meta-nav">&rarr;</span>', 'twentyeleven' ) . '</a>';
 }
-endif; // twentyeleven_continue_reading_link
 
 /**
  * Replaces "[...]" (appended to automatically generated excerpts) with an ellipsis and twentyeleven_continue_reading_link().
@@ -375,8 +356,7 @@ add_filter( 'get_the_excerpt', 'twentyeleven_custom_excerpt_more' );
  * Get our wp_nav_menu() fallback, wp_page_menu(), to show a home link.
  */
 function twentyeleven_page_menu_args( $args ) {
-	if ( ! isset( $args['show_home'] ) )
-		$args['show_home'] = true;
+	$args['show_home'] = true;
 	return $args;
 }
 add_filter( 'wp_page_menu_args', 'twentyeleven_page_menu_args' );
@@ -445,11 +425,11 @@ if ( ! function_exists( 'twentyeleven_content_nav' ) ) :
 /**
  * Display navigation to next/previous pages when applicable
  */
-function twentyeleven_content_nav( $html_id ) {
+function twentyeleven_content_nav( $nav_id ) {
 	global $wp_query;
 
 	if ( $wp_query->max_num_pages > 1 ) : ?>
-		<nav id="<?php echo esc_attr( $html_id ); ?>">
+		<nav id="<?php echo $nav_id; ?>">
 			<h3 class="assistive-text"><?php _e( 'Post navigation', 'twentyeleven' ); ?></h3>
 			<div class="nav-previous"><?php next_posts_link( __( '<span class="meta-nav">&larr;</span> Older posts', 'twentyeleven' ) ); ?></div>
 			<div class="nav-next"><?php previous_posts_link( __( 'Newer posts <span class="meta-nav">&rarr;</span>', 'twentyeleven' ) ); ?></div>
@@ -457,24 +437,6 @@ function twentyeleven_content_nav( $html_id ) {
 	<?php endif;
 }
 endif; // twentyeleven_content_nav
-
-/**
- * Return the first link from the post content. If none found, the
- * post permalink is used as a fallback.
- *
- * @uses get_url_in_content() to get the first URL from the post content.
- *
- * @return string
- */
-function twentyeleven_get_first_url() {
-	$content = get_the_content();
-	$has_url = function_exists( 'get_url_in_content' ) ? get_url_in_content( $content ) : false;
-
-	if ( ! $has_url )
-		$has_url = twentyeleven_url_grabber();
-
-	return ( $has_url ) ? $has_url : apply_filters( 'the_permalink', get_permalink() );
-}
 
 /**
  * Return the URL for the first link found in the post content.
@@ -559,7 +521,7 @@ function twentyeleven_comment( $comment, $args, $depth ) {
 						/* translators: 1: comment author, 2: date and time */
 						printf( __( '%1$s on %2$s <span class="says">said:</span>', 'twentyeleven' ),
 							sprintf( '<span class="fn">%s</span>', get_comment_author_link() ),
-							sprintf( '<a href="%1$s"><time datetime="%2$s">%3$s</time></a>',
+							sprintf( '<a href="%1$s"><time pubdate datetime="%2$s">%3$s</time></a>',
 								esc_url( get_comment_link( $comment->comment_ID ) ),
 								get_comment_time( 'c' ),
 								/* translators: 1: date, 2: time */
@@ -599,7 +561,7 @@ if ( ! function_exists( 'twentyeleven_posted_on' ) ) :
  * @since Twenty Eleven 1.0
  */
 function twentyeleven_posted_on() {
-	printf( __( '<span class="sep">Posted on </span><a href="%1$s" title="%2$s" rel="bookmark"><time class="entry-date" datetime="%3$s">%4$s</time></a><span class="by-author"> <span class="sep"> by </span> <span class="author vcard"><a class="url fn n" href="%5$s" title="%6$s" rel="author">%7$s</a></span></span>', 'twentyeleven' ),
+	printf( __( '<span class="sep">Posted on </span><a href="%1$s" title="%2$s" rel="bookmark"><time class="entry-date" datetime="%3$s" pubdate>%4$s</time></a><span class="by-author"> <span class="sep"> by </span> <span class="author vcard"><a class="url fn n" href="%5$s" title="%6$s" rel="author">%7$s</a></span></span>', 'twentyeleven' ),
 		esc_url( get_permalink() ),
 		esc_attr( get_the_time() ),
 		esc_attr( get_the_date( 'c' ) ),
@@ -631,41 +593,79 @@ function twentyeleven_body_classes( $classes ) {
 add_filter( 'body_class', 'twentyeleven_body_classes' );
 
 /**
- * Retrieves the IDs for images in a gallery.
- *
- * @uses get_post_galleries() first, if available. Falls back to shortcode parsing,
- * then as last option uses a get_posts() call.
- *
- * @since Twenty Eleven 1.6.
- *
- * @return array List of image IDs from the post gallery.
- */
-function twentyeleven_get_gallery_images() {
-	$images = array();
+ * Esto es adicional para Hologrammatic Tagging
+*/
 
-	if ( function_exists( 'get_post_galleries' ) ) {
-		$galleries = get_post_galleries( get_the_ID(), false );
-		if ( isset( $galleries[0]['ids'] ) )
-		 	$images = explode( ',', $galleries[0]['ids'] );
-	} else {
-		$pattern = get_shortcode_regex();
-		preg_match( "/$pattern/s", get_the_content(), $match );
-		$atts = shortcode_parse_atts( $match[3] );
-		if ( isset( $atts['ids'] ) )
-			$images = explode( ',', $atts['ids'] );
-	}
-
-	if ( ! $images ) {
-		$images = get_posts( array(
-			'fields'         => 'ids',
-			'numberposts'    => 999,
-			'order'          => 'ASC',
-			'orderby'        => 'menu_order',
-			'post_mime_type' => 'image',
-			'post_parent'    => get_the_ID(),
-			'post_type'      => 'attachment',
-		) );
-	}
-
-	return $images;
+function cloudtag_queryvars( $vars )
+{
+  $vars[] = 'tags';
+  return $vars;
 }
+add_filter('query_vars', 'cloudtag_queryvars' );
+
+function get_curr_tags_array(){
+	if (get_query_var('tags') == '')
+		return array();
+  
+	return explode(",", get_query_var('tags'));
+}
+
+function get_curr_tags() {
+	return get_query_var('tags');
+}
+
+function my_wp_tag_cloud( $args = '' ) {
+	$currtags_array = get_curr_tags_array();
+  
+	$defaults = array(
+		'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 45,
+		'format' => 'flat', 'separator' => "\n", 'orderby' => 'name', 'order' => 'ASC',
+		'exclude' => '', 'include' => '', 'taxonomy' => 'post_tag', 'echo' => true,
+		'semantics' => 'add'
+	);
+	$args = wp_parse_args( $args, $defaults );
+
+	$tags = get_terms( $args['taxonomy'], array_merge( $args, array( 'orderby' => 'count', 'order' => 'DESC' ) ) ); // Always query top tags
+
+	if ( empty( $tags ) || is_wp_error( $tags ) )
+		return;
+
+	foreach ( $tags as $key => $tag ) {
+		if ( 'del' == $args['semantics'] ) {
+			$tagarr = $currtags_array;
+			$dkey = array_search($tag->term_id, $tagarr);
+			if ($dkey!== NULL) {
+				unset($tagarr[$dkey]);
+			}
+                            
+			$tagvar = implode(",", $tagarr);
+			$link = add_query_arg( "tags", $tagvar);
+		}
+		else {
+			$tagarr = array_merge($currtags_array, array($tag->term_id));
+			$tagvar = implode(",", $tagarr);
+			$link = add_query_arg( "tags", $tagvar );
+		}
+		// if dont
+		//$link = "?".$query_string."&tag=".$tag->term_id;
+                  
+		if ( is_wp_error( $link ) )
+			return false;
+
+		$tags[ $key ]->link = $link;
+		$tags[ $key ]->id = $tag->term_id;
+	}
+
+	$return = wp_generate_tag_cloud( $tags, $args ); // Here's where those top tags get sorted according to $args
+
+	$return = apply_filters( 'wp_tag_cloud', $return, $args );
+
+	if ( 'array' == $args['format'] || empty($args['echo']) )
+		return $return;
+
+	echo $return;
+}
+
+/**
+* hasta aqui
+*/

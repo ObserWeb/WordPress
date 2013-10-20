@@ -12,9 +12,15 @@
  * @subpackage Twenty_Eleven
  */
 
-get_header(); ?>
 
-		<div id="primary">
+get_header(); 
+
+$the_query = new WP_Query( array( 'tag__and' => get_curr_tags_array() ) );
+
+// query_posts(''); 
+?>
+
+		<div id="primary" class="content-area">
 			<div id="content" role="main">
 
 			<?php if ( have_posts() ) : ?>
@@ -22,7 +28,8 @@ get_header(); ?>
 				<?php twentyeleven_content_nav( 'nav-above' ); ?>
 
 				<?php /* Start the Loop */ ?>
-				<?php while ( have_posts() ) : the_post(); ?>
+				<?php //while ( have_posts() ) : the_post(); fue reemplazado por ?>
+			<?php while ( $the_query->have_posts() ) : $the_query->the_post(); ?>
 
 					<?php get_template_part( 'content', get_post_format() ); ?>
 
