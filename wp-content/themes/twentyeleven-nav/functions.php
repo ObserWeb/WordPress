@@ -687,11 +687,13 @@ $time_start = microtime(true);
       if ($q->found_posts > 0) $tag->count = $q->found_posts;
       else unset($tags[$key]);
     }
+    $time_end = microtime(true);
+    $time = $time_end - $time_start;
+    echo "Loop count took $time seconds\n";
   }
-  $time_end = microtime(true);
-  $time = $time_end - $time_start;
+  
 
-  echo "Loop count took $time seconds\n";
+
   
 	$return = wp_generate_tag_cloud( $tags, $args ); // Here's where those top tags get sorted according to $args
 
