@@ -615,10 +615,10 @@ function get_curr_tags() {
 }
 
 function my_wp_tag_cloud( $args = '' ) {
-	$currtags_array = get_curr_tags_array();
+	$currtags_array = get_curr_tags_array(); //etiquetas activas
   
 	$defaults = array(
-		'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 45,
+		'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 500,
 		'format' => 'flat', 'separator' => "\n", 'orderby' => 'name', 'order' => 'ASC',
 		'exclude' => '', 'include' => '', 'taxonomy' => 'post_tag', 'echo' => true,
 		'semantics' => 'add'
@@ -626,28 +626,23 @@ function my_wp_tag_cloud( $args = '' ) {
 	$args = wp_parse_args( $args, $defaults );
 
 	$tags = get_terms( $args['taxonomy'], array_merge( $args, array( 'orderby' => 'count', 'order' => 'DESC' ) ) ); // Always query top tags
+//etiquetas ingresadas como parámetros; pero sólo de las "popular" que son las "no-vacias" y a los mas el 'number' de $default
 
 	if ( empty( $tags ) || is_wp_error( $tags ) )
 		return;
 
 	foreach ( $tags as $key => $tag ) {
-		if ( 'del' == $args['semantics'] ) {
-			$tagarr = $currtags_array;
-			$dkey = array_search($tag->term_id, $tagarr);
-			if ($dkey!== NULL) {
-				unset($tagarr[$dkey]);
-			}
-                            
-			$taglist = implode(",", $tagarr);
-			$link = add_query_arg( "tags", $taglist);
+		$tagarr = $currtags_array;
+		$dkey = array_search($tag->term_id, $tagarr);
+		if ($dkey!== FALSE) { 
+			unset($tagarr[$dkey]); //se saca la etiqueta, si activa; para preparar el $tag[$key]->link que gatilla la próxima iteracion.
 		}
 		else {
-			$tagarr = array_merge($currtags_array, array($tag->term_id));
-			$taglist = implode(",", $tagarr);
-			$link = add_query_arg( "tags", $taglist );
+			$tagarr = array_merge($tagarr, array($tag->term_id)); //así que este array tiene las activas más la agregada
 		}
-		// if dont
-		//$link = "?".$query_string."&tag=".$tag->term_id;
+
+	$taglist = implode(",", $tagarr);
+	$link = add_query_arg( "tags", $taglist );
                   
 		if ( is_wp_error( $link ) )
 			return false;
@@ -656,15 +651,41 @@ function my_wp_tag_cloud( $args = '' ) {
 		$tags[ $key ]->id = $tag->term_id;
 		$tags[ $key ]->tagarr = $tagarr;
 	}
-	
-	if ('add' == $args['semantics']) {
-		foreach ( $tags as $key => $tag ) {
-			$q = new WP_Query( array( 'tag__and' => $tag->tagarr ) );
-			if ($q->found_posts > 0) $tag->count = $q->found_posts;
-			else unset($tags[$key]);
-		}
-	}
-	
+
+// Modifiqué algo lo anterior (sin cambiar la idea) para preparar una nueva variante function wp_tag_hologram( $args = '' )
+// que  integre lo que ahora está en sidebar.php y genere las dos nubes, la roja y la verde;
+// así que para ello habrá que, en lo de arriba, usar array_filter() para particionar el tags en los "rojos" y los "verdes".
+
+if ('add' == $args['semantics']) {
+
+$the_query = new WP_Query( array( 'tag__and' => $currtags_array,'posts_per_page' => -1 ) );
+$list_posts = $the_query->get_posts();
+$cardinalidad = count($list_posts);
+echo $cardinalidad;
+
+/*
+while ( $the_query->have_posts() ) : $the_query->the_post(); 
+$posttags = get_the_tags();
+if ($posttags) {
+  foreach($posttags as $tag) {
+    echo $tag->term_id . ' '; 
+  }
+}	
+endwhile; 
+*/
+
+// creo que lo siguiente es muy ineficiente, cuando el 'number' de $defaults es grande; y que es lo principla que hay que mejorar.
+// Pienso que la estrategia adecuada es recorrer todos los posts "activos", usando el $list-posts de arriba o el loop mismo, como lo veo después, y
+// para cada post activo, recorrer todos sus tags; cada vez incrementando en 1 el tags[key]->count correspondiente (que fue iniciado con 0).
+// Pero aún no sé cómo implementar esta idea :-(
+
+    foreach ( $tags as $key => $tag ) {
+      $q = new WP_Query( array( 'tag__and' => $tag->tagarr ) );
+      if ($q->found_posts > 0) $tag->count = $q->found_posts;
+      else unset($tags[$key]);
+    }
+  }
+
 	$return = wp_generate_tag_cloud( $tags, $args ); // Here's where those top tags get sorted according to $args
 
 	$return = apply_filters( 'wp_tag_cloud', $return, $args );
@@ -674,6 +695,7 @@ function my_wp_tag_cloud( $args = '' ) {
 
 	echo $return;
 }
+
 
 /**
 * hasta aqui

@@ -16,24 +16,29 @@ if ( 'content' != $current_layout ) :
 		<div id="secondary" class="widget-area" role="complementary">
 			<?php if ( ! dynamic_sidebar( 'sidebar-1' ) ) : ?>
 
-<aside id="tags"><?php _e('NAVEGACION HOLOGRAMATICA:'); ?>
+<aside id="tags"><?php _e('NAVEGACION HOLISTA'); ?>
 <?php
-$greenargs = "echo&semantics=add&exclude=".get_curr_tags();
-$greencloud = my_wp_tag_cloud($greenargs); 
 $redcloud = '';
 if (get_curr_tags()!='') {
 	$redargs = "smallest=10&largest=10&format=list&orderby=count&order=DESC&echo&semantics=del&include=".get_curr_tags();
 	$redcloud = my_wp_tag_cloud($redargs);
 }
+
+ 
 ?>
 			<br>
 			<div id="hologrammar" style="color: red;"> 
-			<br> ETIQUETAS ACTIVADAS <br> <?php echo $redcloud; ?>
+			<br> RESTRICCIONES ACTIVADAS: <br> <?php echo $redcloud; ?>
+			=  POSTS ACTIVOS  = 
+			<?php
+			$greenargs = "echo&semantics=add&exclude=".get_curr_tags();
+			$greencloud = my_wp_tag_cloud($greenargs);
+			?>
 			__________________________
 
 			</div>
 			<div id="hologrammar" style="color: green;">
-			<br> DISTINCIONES INACTIVAS <br> <?php echo $greencloud; ?>
+			<br> ETIQUETAS INACTIVAS: <br> <?php echo $greencloud; ?>
 			__________________________
 			<br>
 

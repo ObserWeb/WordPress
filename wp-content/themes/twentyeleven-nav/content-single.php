@@ -1,3 +1,4 @@
+
 <?php
 /**
  * The template for displaying content in the single.php template
@@ -10,8 +11,22 @@
 
 <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 	<header class="entry-header">
-		<h1 class="entry-title"><?php the_title(); ?></h1>
-
+		<?php
+			/* Get the url from the first link in the content */
+			$content = get_the_content();
+			$ret = NULL;
+			$r = explode("href=", $content,2);
+			if (strlen($r[0])<200){
+				$r = explode(">", $r[1],2);
+					if (isset($r[1])){
+					$ret = $r[0];
+				} 
+			}
+			if (!$ret){
+				echo "falta URL inicial";
+			}
+		?>
+		<h1 class="entry-title"><a href=<?php echo $ret ; ?> title="este mismo titulo" rel="bookmark"><?php the_title(); ?></a></h1>
 		<?php if ( 'post' == get_post_type() ) : ?>
 		<div class="entry-meta">
 			<?php twentyeleven_posted_on(); ?>
@@ -25,18 +40,17 @@
 	</div><!-- .entry-content -->
 
 	<footer class="entry-meta">
-		<?php
+		<h2><?php echo "PARA PASAR AL ARTICULO ORIGINAL, PINCHE EL TITULO DE ARRIBA.";?></h2>
+		<?php   
 			/* translators: used between list items, there is a space after the comma */
 			$categories_list = get_the_category_list( __( ', ', 'twentyeleven' ) );
 
 			/* translators: used between list items, there is a space after the comma */
 			$tag_list = get_the_tag_list( '', __( ', ', 'twentyeleven' ) );
 			if ( '' != $tag_list ) {
-				$utility_text = __( 'This entry was posted in %1$s and tagged %2$s by <a href="%6$s">%5$s</a>. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'twentyeleven' );
-			} elseif ( '' != $categories_list ) {
-				$utility_text = __( 'This entry was posted in %1$s by <a href="%6$s">%5$s</a>. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'twentyeleven' );
+				$utility_text = __( 'Etiquetas: %2$s. ', 'twentyeleven' );
 			} else {
-				$utility_text = __( 'This entry was posted by <a href="%6$s">%5$s</a>. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'twentyeleven' );
+				$utility_text = __( 'Este enlace no está etiquetado.', 'twentyeleven' );
 			}
 
 			printf(
@@ -65,7 +79,7 @@
 					</a>
 				</div><!-- #author-link	-->
 			</div><!-- #author-description -->
-		</div><!-- #author-info -->
+		</div><!-- #entry-author-info -->
 		<?php endif; ?>
 	</footer><!-- .entry-meta -->
 </article><!-- #post-<?php the_ID(); ?> -->
