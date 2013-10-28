@@ -657,6 +657,12 @@ function my_wp_tag_cloud( $args = '' ) {
 // así que para ello habrá que, en lo de arriba, usar array_filter() para particionar el tags en los "rojos" y los "verdes".
 
 if ('add' == $args['semantics']) {
+	
+// Este método para contar cuantos posts contienen los tags es demasiado lento.
+// Además, me parece que se sale de contexto, esta funcion solo debe calcular
+// la nube de tags.
+// @diegocaro 
+/*
 $time_start = microtime(true);
 $the_query = new WP_Query( array( 'tag__and' => $currtags_array,'posts_per_page' => -1 ) );
 $list_posts = $the_query->get_posts();
@@ -666,21 +672,11 @@ $time_end = microtime(true);
 $time = $time_end - $time_start;
 
 echo "Cardinalidad took $time seconds\n";
-/*
-while ( $the_query->have_posts() ) : $the_query->the_post(); 
-$posttags = get_the_tags();
-if ($posttags) {
-  foreach($posttags as $tag) {
-    echo $tag->term_id . ' '; 
-  }
-}	
-endwhile; 
 */
 
-// creo que lo siguiente es muy ineficiente, cuando el 'number' de $defaults es grande; y que es lo principla que hay que mejorar.
-// Pienso que la estrategia adecuada es recorrer todos los posts "activos", usando el $list-posts de arriba o el loop mismo, como lo veo después, y
-// para cada post activo, recorrer todos sus tags; cada vez incrementando en 1 el tags[key]->count correspondiente (que fue iniciado con 0).
-// Pero aún no sé cómo implementar esta idea :-(
+
+// Metodo carretero para designar el tamaño de los tags
+/*
 $time_start = microtime(true);
     foreach ( $tags as $key => $tag ) {
       $q = new WP_Query( array( 'tag__and' => $tag->tagarr ) );
@@ -691,12 +687,10 @@ $time_start = microtime(true);
     $time = $time_end - $time_start;
     echo "Loop count took $time seconds\n";
   }
-  
+*/
 
 
-
-  // nuevo mecanismo
-
+// nuevo mecanismo para definir el tamaño de los tags
   $time_start = microtime(true);
 
   global $wpdb;
