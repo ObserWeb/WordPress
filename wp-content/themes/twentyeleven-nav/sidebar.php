@@ -24,15 +24,16 @@ if (get_curr_tags()!='') {
 	$redcloud = my_wp_tag_cloud($redargs);
 }
 
- 
+$greenargs = "echo&semantics=add&exclude=".get_curr_tags();
+$greencloud = my_wp_tag_cloud($greenargs);
+
 ?>
 			<br>
 			<div id="hologrammar" style="color: red;"> 
 			<br> RESTRICCIONES ACTIVADAS: <br> <?php echo $redcloud; ?>
 			=  POSTS ACTIVOS  = 
 			<?php
-			$greenargs = "echo&semantics=add&exclude=".get_curr_tags();
-			$greencloud = my_wp_tag_cloud($greenargs);
+			$the_query->found_posts;
 			?>
 			__________________________
 
