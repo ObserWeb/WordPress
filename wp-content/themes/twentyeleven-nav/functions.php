@@ -694,6 +694,52 @@ $time_start = microtime(true);
   
 
 
+
+  $time_start = microtime(true);
+
+  global $wpdb;
+  $sql = "SELECT $wpdb->term_relationships.object_id as post_id, 
+      	$wpdb->term_relationships.term_taxonomy_id as tag_id FROM $wpdb->term_relationships";
+  $postags = $wpdb->get_results($sql);
+  
+  $tags_posts = array();
+  $posts_tags = array();
+  
+  foreach ( $postags as $p ) 
+  {
+  	//echo $p->post_id;
+	//echo $p->tag_id;
+	$tags_posts[$p->tag_id][] = $p->post_id;
+	$posts_tags[$p->post_id][] = $p->tag_id;
+  }
+  
+  // obtener interseccion de posts con los tags seleccionados
+  $postinter = array_keys($posts_tags);
+  
+  foreach($currtags_array as $currtag) {
+	  $postinter = array_intersect($postinter, $tags_posts[$currtag]);
+  }
+  
+  //conteo de tags con los posts filtrados
+  $tagsize = array();
+  foreach($postinter as $post_id) {
+	  foreach($posts_tags[$post_id] as $t) {
+		  if (array_key_exists($t, $tagsize)) {
+		  $tagsize[$t] += 1;
+	  	}
+		else {
+			$tagsize[$t] = 1;
+		}
+	  }
+  }
+
+  //var_dump($tagsize);
+  $time_end = microtime(true);
+  $time = $time_end - $time_start;
+  echo "New loop count took $time seconds\n";
+
+
+
   
 	$return = wp_generate_tag_cloud( $tags, $args ); // Here's where those top tags get sorted according to $args
 
