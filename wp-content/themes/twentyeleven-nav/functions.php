@@ -695,6 +695,8 @@ $time_start = microtime(true);
 
 
 
+  // nuevo mecanismo
+
   $time_start = microtime(true);
 
   global $wpdb;
@@ -704,6 +706,8 @@ $time_start = microtime(true);
   
   $tags_posts = array();
   $posts_tags = array();
+  
+  
   
   foreach ( $postags as $p ) 
   {
@@ -732,6 +736,13 @@ $time_start = microtime(true);
 		}
 	  }
   }
+
+  foreach ( $tags as $key => $tag ) {
+    $c = $tagsize[$tag->term_id];
+    if ($c > 0) $tag->count = $c;
+    else unset($tags[$key]);
+  }
+
 
   //var_dump($tagsize);
   $time_end = microtime(true);
