@@ -33,7 +33,7 @@ $greencloud = my_wp_tag_cloud($greenargs);
 			<br> RESTRICCIONES ACTIVADAS: <br> <?php echo $redcloud; ?>
 			=  POSTS ACTIVOS  = 
 			<?php
-			$the_query->found_posts;
+			//$the_query->found_posts;
 			?>
 			__________________________
 
