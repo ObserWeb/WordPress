@@ -604,98 +604,142 @@ function cloudtag_queryvars( $vars )
 add_filter('query_vars', 'cloudtag_queryvars' );
 
 function get_curr_tags_array(){
-	if (get_query_var('tags') == '')
-		return array();
+        if (get_query_var('tags') == '')
+                return array();
   
-	return explode(",", get_query_var('tags'));
+        return explode(",", get_query_var('tags'));
 }
 
-function get_curr_tags() {
-	return get_query_var('tags');
-}
+function wp_holistic_nav( $args = '' ) {
 
-function my_wp_tag_cloud( $args = '' ) {
-	$currtags_array = get_curr_tags_array(); //etiquetas activas
+        $currtags_array = get_curr_tags_array(); //etiquetas activas
   
-	$defaults = array(
-		'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 500,
-		'format' => 'flat', 'separator' => "\n", 'orderby' => 'name', 'order' => 'ASC',
-		'exclude' => '', 'include' => '', 'taxonomy' => 'post_tag', 'echo' => true,
-		'semantics' => 'add'
-	);
-	$args = wp_parse_args( $args, $defaults );
+        $defaults = array(
+                'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 500,
+                'format' => 'flat', 'separator' => "\n", 'orderby' => 'name', 'order' => 'ASC',
+                'exclude' => '', 'include' => '', 'taxonomy' => 'post_tag', 'echo' => true,
+                'semantics' => 'add'
+        );
 
-	$tags = get_terms( $args['taxonomy'], array_merge( $args, array( 'orderby' => 'count', 'order' => 'DESC' ) ) ); // Always query top tags
-//etiquetas ingresadas como parámetros; pero sólo de las "popular" que son las "no-vacias" y a los mas el 'number' de $default
+	$tags = get_terms('post_tag');
 
-	if ( empty( $tags ) || is_wp_error( $tags ) )
-		return;
+        if ( empty( $tags ) || is_wp_error( $tags ) )
+                return;
 
-	foreach ( $tags as $key => $tag ) {
-		$tagarr = $currtags_array;
-		$dkey = array_search($tag->term_id, $tagarr);
-		if ($dkey!== FALSE) { 
-			unset($tagarr[$dkey]); //se saca la etiqueta, si activa; para preparar el $tag[$key]->link que gatilla la próxima iteracion.
-		}
-		else {
-			$tagarr = array_merge($tagarr, array($tag->term_id)); //así que este array tiene las activas más la agregada
-		}
+	$redtags = array();
+	$greentags = array();
 
-	$taglist = implode(",", $tagarr);
-	$link = add_query_arg( "tags", $taglist );
+        foreach ( $tags as $key => $tag ) {
+                $tagarr = $currtags_array;
+                $dkey = array_search($tag->term_id, $tagarr);
+                if ($dkey!== FALSE) { 
+                        unset($tagarr[$dkey]); //se saca la etiqueta, si activa; para preparar el $tag[$key]->link que gatilla la próxima iteracion.
+			 $redtags[] = $tag; // pasa a ser "activa"
+                }
+                else {
+                        $tagarr = array_merge($tagarr, array($tag->term_id)); //así que este array tiene las activas más la agregada
+			 $greentags[] = $tag; // pasa a ser "inactiva"
+                }
+
+// en vez de trabajar con la copia-partición ($redtags,$greentags) de $tags, también se hubiera podido
+// apartar $actags de $tags --los correspondientes a $redtags---; de tal manera que el $tags restante corresponda a $greentags
+
+        $taglist = implode(",", $tagarr);
+        $link = add_query_arg( "tags", $taglist );
                   
-		if ( is_wp_error( $link ) )
-			return false;
+                if ( is_wp_error( $link ) )
+                        return false;
 
-		$tags[ $key ]->link = $link;
-		$tags[ $key ]->id = $tag->term_id;
-		$tags[ $key ]->tagarr = $tagarr;
-	}
+                $tags[ $key ]->link = $link;
+                $tags[ $key ]->id = $tag->term_id;
+                $tags[ $key ]->tagarr = $tagarr;
+        }
 
-// Modifiqué algo lo anterior (sin cambiar la idea) para preparar una nueva variante function wp_tag_hologram( $args = '' )
-// que  integre lo que ahora está en sidebar.php y genere las dos nubes, la roja y la verde;
-// así que para ello habrá que, en lo de arriba, usar array_filter() para particionar el tags en los "rojos" y los "verdes".
 
-if ('add' == $args['semantics']) {
+// Aquí se genera la lista Y de las etiquetas activas
 
-$the_query = new WP_Query( array( 'tag__and' => $currtags_array,'posts_per_page' => -1 ) );
-$list_posts = $the_query->get_posts();
-$cardinalidad = count($list_posts);
-echo $cardinalidad;
+        $activated = wp_generate_tag_cloud( $redtags,"smallest=8&largest=14&format=list&orderby=count&order=DESC"); 
 
-/*
-while ( $the_query->have_posts() ) : $the_query->the_post(); 
-$posttags = get_the_tags();
-if ($posttags) {
-  foreach($posttags as $tag) {
-    echo $tag->term_id . ' '; 
+// Y desde aquí, la nube de las inactivas que cortan el conjunto \alpha(Y) de los post aún activos
+        
+// nuevo mecanismo para definir el tamaño de los tags inactivos
+  $time_start = microtime(true);
+
+  global $wpdb;
+  $sql = "SELECT $wpdb->term_relationships.object_id as post_id, 
+              $wpdb->term_relationships.term_taxonomy_id as tag_id FROM $wpdb->term_relationships"; 
+// obtener registros object.id y term_taxonomy-id de tabla $wpdb->term_relationship
+  $postags = $wpdb->get_results($sql);
+  
+  $tags_posts = array();
+  $posts_tags = array();
+  
+  foreach ( $postags as $p ) 
+  {
+          //echo $p->post_id;
+        //echo $p->tag_id;
+        $tags_posts[$p->tag_id][] = $p->post_id; // arreglo "punteros" de tag a arreglo de posts etiquetados: \alpha(tag)
+        $posts_tags[$p->post_id][] = $p->tag_id; // arreglo "punteros" de post a arreglo de tags que lo etiquetan: \beta(post)
   }
-}	
-endwhile; 
-*/
+  
+  // obtener interseccion de posts con los tags seleccionados; es decir, "activados"; en $currtags_array
+  $postinter = array_keys($posts_tags); // partiendo de todos los posts; es decir, A
+  
+  foreach($currtags_array as $currtag) { // recorre cada uno de los tags activados; es decir Y
+          $postinter = array_intersect($postinter, $tags_posts[$currtag]); // y se queda sólo con los posts etiquetados por ese tag
+  }							// o sea que finalmente con \alpha(Y)
+// aqui se hubiera podido ir eliminando en los posts que quedan la etiqueta tag, lo que achicaría el $tagsize que sigue --pero no sé...
 
-// creo que lo siguiente es muy ineficiente, cuando el 'number' de $defaults es grande; y que es lo principla que hay que mejorar.
-// Pienso que la estrategia adecuada es recorrer todos los posts "activos", usando el $list-posts de arriba o el loop mismo, como lo veo después, y
-// para cada post activo, recorrer todos sus tags; cada vez incrementando en 1 el tags[key]->count correspondiente (que fue iniciado con 0).
-// Pero aún no sé cómo implementar esta idea :-(
+  $cardinality = count($postinter); // número de posts aún activos; es decir, |\alpha(Y)|
 
-    foreach ( $tags as $key => $tag ) {
-      $q = new WP_Query( array( 'tag__and' => $tag->tagarr ) );
-      if ($q->found_posts > 0) $tag->count = $q->found_posts;
-      else unset($tags[$key]);
-    }
+  //conteo de tags con los posts filtrados ---más bien: conteo de posts filtrados, para cada tag inactivo
+  $tagsize = array();
+  foreach($postinter as $post_id) {
+          foreach($posts_tags[$post_id] as $t) { // aquí se notaría el "achique"
+                  if (array_key_exists($t, $tagsize)) {
+                  $tagsize[$t] += 1;
+                  }
+                else {
+                        $tagsize[$t] = 1;
+                }
+          }
   }
 
-	$return = wp_generate_tag_cloud( $tags, $args ); // Here's where those top tags get sorted according to $args
+  foreach ($greentags  as $key => $tag ) { 
+// en vez de $greentags tal vez se podría hacer un "filtrado dual" de un $taginter; pero quedándose con lo no-filtrado
+    $c = $tagsize[$tag->term_id];
+   if ($c > 0) $tag->count = $c;
+   else unset($greentags[$key]);  // creo que esto es innecesario si $c = 0 implicara que igual no aparece en la nube;
+			      // entonces también se podrían sacar los que tienen $c máximo; porque tendrían "importancia" 0
+  }
 
-	$return = apply_filters( 'wp_tag_cloud', $return, $args );
 
-	if ( 'array' == $args['format'] || empty($args['echo']) )
-		return $return;
+  //var_dump($tagsize);
+  $time_end = microtime(true);
+  $time = $time_end - $time_start;
+  echo "New loop count took $time seconds\n";
 
-	echo $return;
+  
+        $cutting = wp_generate_tag_cloud( $greentags, $defaults ); 
+
+?>
+                        <br>
+                        <div id="hologrammar" style="color: red;"> 
+                        <br> RESTRICCIONES ACTIVADAS: <br> <?php echo $activated; ?>
+                        =  POSTS ACTIVOS  = <?php echo $cardinality; ?>
+                        __________________________
+
+                        </div>
+
+                        <div id="hologrammar" style="color: green;">
+                        <br> ETIQUETAS INACTIVAS: <br> <?php echo $cutting; ?>
+                        __________________________
+                        <br>
+
+                        </div>
+                        <br>
+<?php
 }
-
 
 /**
 * hasta aqui
