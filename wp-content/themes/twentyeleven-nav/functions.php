@@ -593,7 +593,7 @@ function twentyeleven_body_classes( $classes ) {
 add_filter( 'body_class', 'twentyeleven_body_classes' );
 
 /**
- * Esto es adicional para Hologrammatic Tagging
+ * Esto es adicional para Holistic Navigation
 */
 
 function cloudtag_queryvars( $vars )
@@ -601,7 +601,7 @@ function cloudtag_queryvars( $vars )
   $vars[] = 'tags';
   return $vars;
 }
-add_filter('query_vars', 'cloudtag_queryvars' );
+add_filter('query_vars', 'cloudtag_queryvars' ); // ¿se puede hacer análogo a wp_tag_cloud( apply_filters('widget_tag_cloud_args', .. en default-widgets.php
 
 function get_curr_tags_array(){
         if (get_query_var('tags') == '')
@@ -658,7 +658,7 @@ function wp_holistic_nav( $args = '' ) {
 
 // Aquí se genera la lista Y de las etiquetas activas
 
-        $activated = wp_generate_tag_cloud( $redtags,"smallest=8&largest=14&format=list&orderby=count&order=DESC"); 
+        $activated = wp_generate_tag_cloud( $redtags,"smallest=12&largest=12&format=list"); 
 
 // Y desde aquí, la nube de las inactivas que cortan el conjunto \alpha(Y) de los post aún activos
         
@@ -717,21 +717,26 @@ function wp_holistic_nav( $args = '' ) {
   //var_dump($tagsize);
   $time_end = microtime(true);
   $time = $time_end - $time_start;
-  echo "New loop count took $time seconds\n";
+//  echo "New loop count took $time seconds\n";
 
   
         $cutting = wp_generate_tag_cloud( $greentags, $defaults ); 
 
+        $cutting = wp_generate_tag_cloud( $greentags, $defaults ); 
+
+	$return = array("activated" => $activated,"cardinality" => $cardinality,"cutting" => $cutting);
+	return $return;
+
 ?>
                         <br>
-                        <div id="hologrammar" style="color: red;"> 
-                        <br> RESTRICCIONES ACTIVADAS: <br> <?php echo $activated; ?>
+                        <div id="holistic_nav" style="color: red;"> 
+                        <br> ETIQUETAS ACTIVADAS: <br> <?php echo $activated; ?>
                         =  POSTS ACTIVOS  = <?php echo $cardinality; ?>
                         __________________________
 
                         </div>
 
-                        <div id="hologrammar" style="color: green;">
+                        <div id="holistic_nav" style="color: green;">
                         <br> ETIQUETAS INACTIVAS: <br> <?php echo $cutting; ?>
                         __________________________
                         <br>
@@ -741,6 +746,11 @@ function wp_holistic_nav( $args = '' ) {
 <?php
 }
 
+
+
+
+
+
 /**
-* hasta aqui
+* hasta aqui Holistic Navigation
 */
