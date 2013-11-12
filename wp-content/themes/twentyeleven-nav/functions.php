@@ -610,6 +610,10 @@ function get_curr_tags_array(){
         return explode(",", get_query_var('tags'));
 }
 
+function importance_count_text( $count ) {
+        return sprintf( _n('%s importancia', '%s importancia', $count), number_format_i18n( $count ) );
+	}
+
 function wp_holistic_nav( $args = '' ) {
 
         $currtags_array = get_curr_tags_array(); //etiquetas activas
@@ -705,12 +709,11 @@ function wp_holistic_nav( $args = '' ) {
           }
   }
 
+  $log_card = round(log10($cardinality) * 100);
   foreach ($greentags  as $key => $tag ) { 
-// en vez de $greentags tal vez se podría hacer un "filtrado dual" de un $taginter; pero quedándose con lo no-filtrado
     $c = $tagsize[$tag->term_id];
-   if ($c > 0) $tag->count = $c;
-   else unset($greentags[$key]);  // creo que esto es innecesario si $c = 0 implicara que igual no aparece en la nube;
-			      // entonces también se podrían sacar los que tienen $c máximo; porque tendrían "importancia" 0
+   if ($c > 0 && $c < $cardinality) $tag->count = $c * ($log_card - round(log10($c) * 100));// cálculo de "importancia"; antes sólo = $c; 
+   else unset($greentags[$key]);  // sólo nos quedamos con las etiquetas que "realmente cortan" \alpha(Y) 
   }
 
 
@@ -719,31 +722,12 @@ function wp_holistic_nav( $args = '' ) {
   $time = $time_end - $time_start;
 //  echo "New loop count took $time seconds\n";
 
-  
-        $cutting = wp_generate_tag_cloud( $greentags, $defaults ); 
-
-        $cutting = wp_generate_tag_cloud( $greentags, $defaults ); 
+        $cutting = wp_generate_tag_cloud( $greentags, " 'topic_count_text_callback' = 'importance_count_text' "); 
+// aún no he podido modifacar el topic_count_text_callback, para que diga "importancia" y no "topic"
 
 	$return = array("activated" => $activated,"cardinality" => $cardinality,"cutting" => $cutting);
 	return $return;
 
-?>
-                        <br>
-                        <div id="holistic_nav" style="color: red;"> 
-                        <br> ETIQUETAS ACTIVADAS: <br> <?php echo $activated; ?>
-                        =  POSTS ACTIVOS  = <?php echo $cardinality; ?>
-                        __________________________
-
-                        </div>
-
-                        <div id="holistic_nav" style="color: green;">
-                        <br> ETIQUETAS INACTIVAS: <br> <?php echo $cutting; ?>
-                        __________________________
-                        <br>
-
-                        </div>
-                        <br>
-<?php
 }
 
 
