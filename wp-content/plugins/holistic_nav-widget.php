@@ -41,18 +41,29 @@ class Holistic_Nav_Widget extends WP_Widget {
 		$state = wp_holistic_nav( '' );
 
 ?>
-                        <div id="hologrammar" style="color: red;"> 
-                        <br> RESTRICCIONES ACTIVADAS: <br> <?php echo $state["activated"]; ?>
-                        <br> =  POSTS ACTIVOS  = <?php echo $state["cardinality"]; ?>
-                        __________________________
+                        <div id="holistic_nav" style="color: red;"> 
 
+			<?php if($state["activated"]) { ?>
+                        <br> ETIQUETAS ACTIVADAS: <br> <?php echo $state["activated"]; ?>
+			 <?php } ?>
+
+                        <br> < lista de <?php echo $state["cardinality"]; ?> posteos filtrados
+                        __________________________
                         </div>
 
-                        <div id="hologrammar" style="color: green;">
-                        <br> ETIQUETAS INACTIVAS: <br> <?php echo $state["cutting"]; ?>
+			<?php if($state["implied"]) { ?>
+                        <div id="holistic_nav" style="color: orange;"> 
+                        <br> ETIQUETAS IMPLICADAS: <br> <?php echo $state["implied"]; ?>
                         __________________________
-
                         </div>
+			 <?php } ?>
+
+			<?php if($state["cutting"]) { ?>
+                        <div id="holistic_nav" style="color: green;">
+                        <br> ETIQUETAS HABILITADAS: <br> <?php echo $state["cutting"]; ?>
+                        __________________________
+                        </div>
+			 <?php } ?>
 <?php
 
 		echo "</div>\n";

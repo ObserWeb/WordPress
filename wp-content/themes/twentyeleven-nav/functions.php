@@ -610,10 +610,6 @@ function get_curr_tags_array(){
         return explode(",", get_query_var('tags'));
 }
 
-function importance_count_text( $count ) {
-        return sprintf( _n('%s importancia', '%s importancia', $count), number_format_i18n( $count ) );
-	}
-
 function wp_holistic_nav( $args = '' ) {
 
         $currtags_array = get_curr_tags_array(); //etiquetas activas
@@ -631,6 +627,7 @@ function wp_holistic_nav( $args = '' ) {
                 return;
 
 	$redtags = array();
+	$orangetags = array();
 	$greentags = array();
 
         foreach ( $tags as $key => $tag ) {
@@ -662,7 +659,7 @@ function wp_holistic_nav( $args = '' ) {
 
 // Aquí se genera la lista Y de las etiquetas activas
 
-        $activated = wp_generate_tag_cloud( $redtags,"smallest=12&largest=12&format=list"); 
+        $activated = wp_generate_tag_cloud( $redtags,"smallest=14&largest=14&format=list"); 
 
 // Y desde aquí, la nube de las inactivas que cortan el conjunto \alpha(Y) de los post aún activos
         
@@ -709,31 +706,27 @@ function wp_holistic_nav( $args = '' ) {
           }
   }
 
-  $log_card = round(log10($cardinality) * 100);
   foreach ($greentags  as $key => $tag ) { 
     $c = $tagsize[$tag->term_id];
-   if ($c > 0 && $c < $cardinality) $tag->count = $c * ($log_card - round(log10($c) * 100));// cálculo de "importancia"; antes sólo = $c; 
-   else unset($greentags[$key]);  // sólo nos quedamos con las etiquetas que "realmente cortan" \alpha(Y) 
+    $tag->count = $c;
+    if($c == 0) unset($greentags[$key]);
+    if($c == $cardinality) {
+    $orangetags[] = $tag; unset($greentags[$key]);   // sólo nos quedamos con las etiquetas que "realmente cortan" \alpha(Y) 
+    }
   }
-
 
   //var_dump($tagsize);
   $time_end = microtime(true);
   $time = $time_end - $time_start;
 //  echo "New loop count took $time seconds\n";
 
-        $cutting = wp_generate_tag_cloud( $greentags, " 'topic_count_text_callback' = 'importance_count_text' "); 
-// aún no he podido modifacar el topic_count_text_callback, para que diga "importancia" y no "topic"
+	$implied = wp_generate_tag_cloud( $orangetags,"smallest=14&largest=14&format=list");
+        $cutting = wp_generate_tag_cloud( $greentags,"smallest=8&largest=16"); 
 
-	$return = array("activated" => $activated,"cardinality" => $cardinality,"cutting" => $cutting);
+	$return = array("activated" => $activated,"cardinality" => $cardinality,"implied" => $implied,"cutting" => $cutting);
 	return $return;
 
 }
-
-
-
-
-
 
 /**
 * hasta aqui Holistic Navigation
